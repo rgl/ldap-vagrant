@@ -1,8 +1,12 @@
-This is a [Vagrant](https://www.vagrantup.com/) Environment for a [LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) Server.
+This is a [Vagrant](https://www.vagrantup.com/) Environment for a [Directory/LDAP](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) Server.
 
 This lets you easily test your application code against a real sandboxed server.
 
 This uses the [slapd](http://www.openldap.org/software/man.cgi?query=slapd) daemon from [OpenLDAP](http://www.openldap.org/).
+
+LDAP is described at [RFC 4510 (Technical Specification)](https://tools.ietf.org/html/rfc4510).
+
+Also check the [OpenLDAP Server documentation at the Ubuntu Server Guide](https://help.ubuntu.com/lts/serverguide/openldap-server.html).
 
 # Usage
 
@@ -26,3 +30,7 @@ The environment comes pre-configured with the following entries:
 To see how these were added take a look at the end of the [provision.sh](provision.sh) file.
 
 To troubleshoot, watch the logs with `vagrant ssh` and `sudo journalctl --follow`.
+
+# Examples
+
+There are examples available on how to connect to LDAP programmatically (e.g. from Go). Have a look at the [examples directory](examples).

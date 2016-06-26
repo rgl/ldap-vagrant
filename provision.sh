@@ -60,6 +60,7 @@ mail: $name@$config_domain
 cn: $name doe
 givenName: $name
 sn: doe
+telephoneNumber: +1 888 555 000$((n+1))
 labeledURI: http://example.com/~$name Personal Home Page
 jpegPhoto::$(base64 -w 66 /vagrant/avatars/avatar-$n.jpg | sed 's,^, ,g')
 EOF
@@ -69,5 +70,11 @@ for n in "${!people[@]}"; do
     add_person $n "${people[$n]}"
 done
 
+# show the configuration tree.
+ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn | grep -v '^$'
+
+# show the data tree.
+ldapsearch -x -LLL -b $config_domain_dc dn | grep -v '^$'
+
 # search for people and print some of their attributes.
-ldapsearch -x -LLL -b $config_domain_dc '(objectClass=person)' cn mail #jpegPhoto
+ldapsearch -x -LLL -b $config_domain_dc '(objectClass=person)' cn mail
