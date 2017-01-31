@@ -2,14 +2,15 @@
 set -eux
 
 config_organization_name=Example
-config_fqdn=$(hostname --fqdn)
-config_domain=$(hostname --domain)
+config_fqdn=ldap.example.com
+config_domain=example.com
 config_domain_dc="dc=$(echo $config_domain | sed 's/\./,dc=/g')"
 config_admin_dn="cn=admin,$config_domain_dc"
 config_admin_password=password
 
 echo "127.0.0.1 $config_fqdn" >>/etc/hosts
 
+apt-get update
 apt-get install -y --no-install-recommends vim
 cat >/etc/vim/vimrc.local <<'EOF'
 syntax on
@@ -47,6 +48,72 @@ objectClass: organizationalUnit
 ou: people
 EOF
 
+ldapadd -D $config_admin_dn -w $config_admin_password <<EOF
+dn: ou=groups,$config_domain_dc
+objectClass: organizationalUnit
+ou: groups
+EOF
+
+ldapadd -Q -Y EXTERNAL -H ldapi:/// <<EOF
+dn: cn=module,cn=config
+cn: module
+objectClass: olcModuleList
+objectClass: top
+olcModuleLoad: memberof.la
+olcModulePath: /usr/lib/ldap
+
+dn: olcOverlay={0}memberof,olcDatabase={1}mdb,cn=config
+objectClass: olcConfig
+objectClass: olcMemberOf
+objectClass: olcOverlayConfig
+objectClass: top
+olcOverlay: memberof
+olcMemberOfDangling: ignore
+olcMemberOfRefInt: TRUE
+olcMemberOfGroupOC: groupOfNames
+olcMemberOfMemberAD: member
+olcMemberOfMemberOfAD: memberOf
+EOF
+
+
+ldapadd -Q -Y EXTERNAL -H ldapi:/// <<EOF
+dn: cn=module,cn=config
+cn: module
+objectClass: olcModuleList
+objectClass: top
+olcmoduleload: refint.la
+olcmodulepath: /usr/lib/ldap
+
+dn: olcOverlay={1}refint,olcDatabase={1}mdb,cn=config
+objectClass: olcConfig
+objectClass: olcOverlayConfig
+objectClass: olcRefintConfig
+objectClass: top
+olcOverlay: {1}refint
+olcRefintAttribute: memberof member manager owner
+EOF
+
+ldapadd -Y EXTERNAL -H ldapi:/// <<EOF
+dn: olcDatabase={-1}frontend,cn=config
+changetype: modify
+delete: olcAccess
+
+dn: olcDatabase={0}config,cn=config
+changetype: modify
+add: olcRootDN
+olcRootDN: cn=admin,cn=config
+
+dn: olcDatabase={0}config,cn=config
+changetype: modify
+add: olcRootPW
+# Password is set to "admin" - use slappasswd to generate a new one if desired
+olcRootPW: $(slappasswd -s password)
+
+dn: olcDatabase={0}config,cn=config
+changetype: modify
+delete: olcAccess
+EOF
+
 # add people.
 function add_person {
     local n=$1; shift
@@ -54,6 +121,9 @@ function add_person {
     ldapadd -D $config_admin_dn -w $config_admin_password <<EOF
 dn: uid=$name,ou=people,$config_domain_dc
 objectClass: inetOrgPerson
+objectClass: top
+objectClass: organizationalPerson
+objectClass: person
 userPassword: $(slappasswd -s password)
 uid: $name
 mail: $name@$config_domain
@@ -70,8 +140,17 @@ for n in "${!people[@]}"; do
     add_person $n "${people[$n]}"
 done
 
+ldapadd -x -D cn=admin,dc=example,dc=com -w password <<EOF
+dn: cn=stupidGroup,ou=groups,dc=example,dc=com
+objectClass: groupOfNames
+cn: stupidGroup
+description: stupid group test
+member: uid=alice,ou=people,dc=example,dc=com
+member: uid=henry,ou=people,dc=example,dc=com
+EOF
+
 # show the configuration tree.
-ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn | grep -v '^$'
+ldapsearch -x -D cn=admin,cn=config -w password -H ldapi:/// -b cn=config dn | grep -v '^$'
 
 # show the data tree.
 ldapsearch -x -LLL -b $config_domain_dc dn | grep -v '^$'
