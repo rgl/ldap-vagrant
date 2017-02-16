@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu-16.04-amd64"
+  config.vm.box = "hashicorp/precise64"
 
   config.vm.hostname = "ldap.example.com"
 

@@ -36,7 +36,7 @@ slapd slapd/domain string $config_domain
 slapd shared/organization string $config_organization_name
 EOF
 
-apt-get install -y --no-install-recommends slapd ldap-utils
+apt-get install -y --no-install-recommends slapd ldap-utils phpldapadmin
 
 # create the people container.
 # NB the `cn=admin,$config_domain_dc` user was automatically created
