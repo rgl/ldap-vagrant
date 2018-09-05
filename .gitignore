@@ -1,1 +1,4 @@
 .vagrant/
+/examples/go/bind/bind
+/examples/go/list-people/list-people
+/examples/go/search-web/search-web
